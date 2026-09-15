@@ -1,7 +1,5 @@
 #include "myshell.h"
 
-
-
 /* simple bounded copy, since we don't have my_strncpy yet */
 static void copy_string(char *dest, const char *src, size_t size)
 {
@@ -15,6 +13,76 @@ static void copy_string(char *dest, const char *src, size_t size)
         i++;
     }
     dest[i] = '\0';
+}
+
+int execute_pipeline(char ***cmds, int num_cmds, char **env)
+{
+    int i;
+    int in_fd = 0; // Keeps track of the read end of the previous pipe
+    int fd[2];
+    pid_t pid;
+
+    for (i = 0; i < num_cmds; i++)
+    {
+        // Create a new pipe for all but the last command
+        if (i < num_cmds - 1)
+        {
+            if (pipe(fd) < 0)
+            {
+                perror("pipe");
+                return 1;
+            }
+        }
+
+        pid = fork();
+        if (pid == -1)
+        {
+            perror("fork");
+            return 1;
+        }
+
+        if (pid == 0) // Child Process
+        {
+            // If there's a previous pipe, read from it instead of standard input
+            if (in_fd != 0)
+            {
+                dup2(in_fd, STDIN_FILENO);
+                close(in_fd);
+            }
+            
+            // If there's a next command, write to the pipe instead of standard output
+            if (i < num_cmds - 1)
+            {
+                dup2(fd[1], STDOUT_FILENO);
+                close(fd[0]); // Child doesn't read from current pipe
+                close(fd[1]); 
+            }
+
+            // Execute the command using your existing child_process helper
+            if (child_process(cmds[i], env) == -1)
+                fprintf(stderr, "%s: command not found\n", cmds[i][0]);
+            
+            _exit(EXIT_FAILURE);
+        }
+
+        // Parent Process: Clean up file descriptors
+        if (in_fd != 0)
+            close(in_fd); // Close previous read end
+            
+        if (i < num_cmds - 1)
+        {
+            close(fd[1]);  // Parent doesn't write to the pipe
+            in_fd = fd[0]; // Save the read end for the next command in the loop
+        }
+    }
+
+    // Wait for all child processes to finish
+    for (i = 0; i < num_cmds; i++)
+    {
+        wait(NULL);
+    }
+    
+    return 1;
 }
 
 int executor(char **args, char **env)
@@ -53,6 +121,7 @@ int child_process(char **args, char **env)
 {
     char *path_string;
     char **path_list;
+  
     char full_path[MAX_PATH_LEN];
     int num_paths = 0;
     int i;

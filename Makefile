@@ -3,7 +3,7 @@ TARGET = my_shell
 CC = gcc
 CFLAGS = -Wall -Wextra -Werror
 
-SRC = main.c input_parser.c shell_loop.c helper.c shell_builtins.c executor.c
+SRC = main.c input_parser.c shell_loop.c helper.c shell_builtins.c executor.c line_reader.c
 OBJ = $(SRC:.c=.o)
 
 all: $(TARGET)

@@ -2,41 +2,55 @@
 
 void shell_loop(char **env)
 {
-    (void)env;
-    char *input = NULL;
-    size_t input_size = 0;
-    ssize_t bytes_read;
-    char **args;
+    char *input;
     char *initial_directory = getcwd(NULL, 0);
 
     while (1)
     {
         printf("[myshell]>");
-        bytes_read = getline(&input, &input_size, stdin);
+        fflush(stdout);
 
-        // Handle EOF (Ctrl+D) or read error
-        if (bytes_read == -1)
+        input = read_line();
+
+        if (input == NULL)   /* Ctrl+D */
         {
-            if (!feof(stdin))
-                perror("Error reading input");
+            printf("\n");
             break;
         }
 
-        // Strip trailing newline left by getline
-        if (bytes_read > 0 && input[bytes_read - 1] == '\n')
-            input[bytes_read - 1] = '\0';
+        int num_cmds = 0;
+        // Split by pipes first
+        char **raw_cmds = split_pipes(input, &num_cmds);
 
-        args = input_parser(input);
-
-        if (args[0] != NULL)
+        if (num_cmds == 1)
         {
-            shell_builtins(args, env, initial_directory);
+            // No pipes: Execute normally (allows builtins to work properly)
+            char **args = input_parser(raw_cmds[0]);
+            if (args[0] != NULL)
+                shell_builtins(args, env, initial_directory);
+            free_tokens(args);
+        }
+        else if (num_cmds > 1)
+        {
+            // Pipes detected: Set up command array
+            char ***pipeline_args = malloc(num_cmds * sizeof(char **));
+            for (int i = 0; i < num_cmds; i++)
+            {
+                pipeline_args[i] = input_parser(raw_cmds[i]);
+            }
+            
+            // Execute the pipeline
+            execute_pipeline(pipeline_args, num_cmds, env);
+
+            // Clean up memory
+            for (int i = 0; i < num_cmds; i++)
+                free_tokens(pipeline_args[i]);
+            free(pipeline_args);
         }
 
-        free_tokens(args);
+        free(raw_cmds);
+        free(input);
     }
 
-    // Free allocated buffers on exit
-    free(input);
     free(initial_directory);
 }

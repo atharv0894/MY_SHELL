@@ -6,10 +6,15 @@
 #include <sys/wait.h>
 
 #define MAX_INPUT 1024
+#define MAX_PATH_LEN 1024
 
 void shell_loop(char **env);
 char **input_parser(char *input);
 void free_tokens(char **tokens);
+
+/* Pipeline execution */
+char **split_pipes(char *input, int *num_cmds);
+int execute_pipeline(char ***cmds, int num_cmds, char **env);
 
 /* custom string/env helpers */
 int my_strcmp(const char *s1, const char *s2);
@@ -19,6 +24,9 @@ char *my_getenv(const char *name, char **env);
 
 int shell_builtins(char **args, char **env, char *initial_directory);
 int executor(char **args, char **env);
+int child_process(char **args, char **env);
+char *get_path(char **env);
+char **split_paths(char *path_string, int *num_paths);
 int command_cd(char **args, char *initial_directory);
 int command_pwd(void);
 int command_echo(char **args, char **env);
@@ -27,9 +35,5 @@ int command_which(char **args, char **env);
 int command_export(char **args, char ***env);
 int command_unset(char **args, char ***env);
 
-
-///executor
-#define MAX_PATH_LEN 1024
-int child_process(char **args, char **env);
-char *get_path(char **env);
-char **split_paths(char *path_string, int *num_paths);
+/* line editing */
+char *read_line(void);
