@@ -33,10 +33,22 @@ int shell_builtins(char **args, char **env, char *initial_directory)
     {
         command_which(args, env);
     }
+    /* export */
+    else if (my_strcmp(args[0], "export") == 0)
+    {
+        command_export(args, &env);
+    }
+    /* unset */
+    else if (my_strcmp(args[0], "unset") == 0)
+    {
+        command_unset(args, &env);
+     }
+    
     else
     {
-        return 0; /* not a builtin — let the caller handle external exec */
+        //not builtin command,execute as exterenal command 
+        executor(args, env);
     }
 
-    return 1;
+    return 0;
 }

@@ -1,5 +1,24 @@
 #include "myshell.h"
 
+char **split_pipes(char *input, int *num_cmds)
+{
+    size_t bufsize = 64;
+    char **cmds = malloc(bufsize * sizeof(char *));
+    int count = 0;
+    
+    // Split the input string using the pipe delimiter
+    char *cmd = strtok(input, "|");
+    while (cmd != NULL)
+    {
+        cmds[count++] = cmd;
+        cmd = strtok(NULL, "|");
+    }
+    cmds[count] = NULL;
+    *num_cmds = count;
+    
+    return cmds;
+}
+
 char **input_parser(char *input)
 {
     size_t buffer_size = MAX_INPUT;
